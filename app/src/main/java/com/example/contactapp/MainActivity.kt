@@ -1,13 +1,12 @@
 package com.example.contactapp
 
-import android.content.Context
+
 import android.os.Bundle
 import android.widget.Toast
-import com.example.contactapp.R
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,21 +16,28 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
 import kotlin.random.Random
+
+// for customized font get font download
+//res -> new -> android resource directory -> resource type font (paste the font file there)
+// fontFamily = FontFamily(Font(R.font.Roboto_one))
+
+//For room database
+//add dependecies search in google
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -96,15 +102,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-}
-
-// Function to toggle selection of a contact
-fun toggleSelection(contact: Contact, selectedContacts: MutableList<Contact>) {
-    if (selectedContacts.contains(contact)) {
-        selectedContacts.remove(contact) // Deselect if already selected
-    } else {
-        selectedContacts.add(contact) // Select if not selected
     }
 }
 
@@ -237,7 +234,8 @@ fun DesignOfContact(
             text = "$firstName $lastName\n$number",
             modifier = Modifier.padding(start = 40.dp),
             fontSize = 17.sp,
-            color = Color.White
+            color = Color.White,
+            fontFamily = FontFamily(Font(R.font.roboto_one))
         )
     }
 }
@@ -339,14 +337,18 @@ fun AddContact(listOfaContacts: MutableList<Contact>) {
                         focusedLabelColor = Color.White,
                         unfocusedLabelColor = Color.White,
                     ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
 
                 Button(
                     onClick = {
                         if (firstname.isNotEmpty() && number.isNotEmpty()) {
-                            val contact = Contact(firstname, lastname, number.toLong())
+                            firstname = firstname.trim()[0].uppercase()+firstname.substring(1)
+                            if(lastname.isNotEmpty()){
+                                lastname =  lastname.trim()[0].uppercase()+lastname.substring(1)
+                            }
+                            val contact = Contact(firstname,lastname, number.toLong())
                             listOfaContacts.add(contact)
                             bottomSheet = false
                             firstname = ""
@@ -401,9 +403,3 @@ fun DeleteHeader(
         }
     }
 }
-
-data class Contact(
-    val firstName: String,
-    val lastName: String,
-    val number: Long,
-)
