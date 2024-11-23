@@ -1,6 +1,5 @@
-package com.example.contactapp
+package com.example.contactapp.databseOperations
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

@@ -4,12 +4,13 @@ package com.example.contactapp
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.*
@@ -27,81 +28,67 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.contactapp.databseOperations.Contact
+import com.example.contactapp.entity.ContactDatabase
 import kotlin.random.Random
+import androidx.room.Room
+import com.example.contactapp.databseOperations.contactRepo
+import com.example.contactapp.viewmodals.ViewModalFactory
+import com.example.contactapp.viewmodals.contactViewModal
 
 // for customized font get font download
 //res -> new -> android resource directory -> resource type font (paste the font file there)
 // fontFamily = FontFamily(Font(R.font.Roboto_one))
 
 //For room database
-//add dependecies search in google
+//add dependencies search in google
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var listOfaContacts = remember {
-                mutableStateListOf<Contact>()
+            val contactDatabase by lazy {
+                Room.databaseBuilder(this.applicationContext, ContactDatabase::class.java, "contact_database").build()
             }
-            var search by remember {
-                mutableStateOf("")
+            val repository by lazy{
+                contactRepo(contactDatabase.contactDao())
             }
-            var isDeleteMode by remember {
-                mutableStateOf(false)
+            val contactViewModel : contactViewModal by viewModels{ // pass the factory we created
+                ViewModalFactory(repository)
             }
-            var selectedContacts = remember {
-                mutableStateListOf<Contact>()
-            }
-
-            // Handle back button to cancel delete mode
-            BackHandler(enabled = isDeleteMode) {
-                isDeleteMode = false
-                selectedContacts.clear()
-            }
-
-            var searchList = listOfaContacts.filter {
-                it.firstName.contains(search, ignoreCase = true) ||
-                        it.lastName.contains(search, ignoreCase = true) ||
-                        it.number.toString().contains(search)
-            }
-            Box {
-                Column(
-                    modifier = Modifier
-                        .background(color = Color.Black)
-                        .fillMaxSize()
-                ) {
-                    if (isDeleteMode) {
-                        DeleteHeader(selectedContacts, listOfaContacts, onCancel = {
-                            isDeleteMode = false
-                            selectedContacts.clear()
-                        })
-                    } else {
-                        Search(search, { search = it })
-                    }
-
-                    Person(
-                        searchList as MutableList<Contact>,
-                        isDeleteMode,
-                        selectedContacts,
-                        onLongPress = { contact ->
-                            isDeleteMode = true
-                            selectedContacts.add(contact)
-                        },
-                        onDeselectAll = {
-                            // Automatically exit delete mode if no contacts are selected
-                            isDeleteMode = false
-                        }
-                    )
-                }
-                if(!isDeleteMode){
-                    AddContact(listOfaContacts)
-                }
-            }
+            MyApp(contactViewModel)
         }
+    }
+}
+
+@Composable
+fun MyApp(viewModal: contactViewModal) {
+    val listOfaContacts by viewModal.contactList.collectAsState()
+    var search by remember {
+        mutableStateOf("")
+    }
+
+//    val searchList = listOfaContacts.filter {
+//        it.firstName.contains(search, ignoreCase = true) ||
+//                it.lastName.contains(search, ignoreCase = true) ||
+//                it.number.toString().contains(search)
+//    }
+
+    Box {
+        Column(
+            modifier = Modifier
+                .background(color = Color.Black)
+                .fillMaxSize()
+        ) {
+            Search(search, {
+                search = it
+            viewModal.searchContact(it)})
+                Person(viewModal)
+        }
+        AddContact(viewModal)
     }
 }
 
@@ -137,84 +124,35 @@ fun Search(search: String, OnValueChange: (String) -> Unit) {
     )
 }
 
-@Composable
-fun Person(
-    listOfaContacts: MutableList<Contact>,
-    isDeleteMode: Boolean,
-    selectedContacts: MutableList<Contact>,
-    onLongPress: (Contact) -> Unit,
-    onDeselectAll: () -> Unit // New callback for deselecting all
-) {
-    val sortedContacts = listOfaContacts.sortedBy { it.firstName.first() }
 
-    LazyColumn(modifier = Modifier.padding(top = 10.dp)) {
-        items(sortedContacts) { contact ->
-            val isSelected = selectedContacts.contains(contact)
-            DesignOfContact(
-                contact.firstName.trim(),
-                contact.lastName.trim(),
-                contact.number,
-                isSelected,
-                onLongPress = { selectedContact ->
-                    if (isDeleteMode) {
-                        if (isSelected) {
-                            // Deselect contact
-                            selectedContacts.remove(selectedContact)
-                            if (selectedContacts.isEmpty()) {
-                                // If no contacts are selected, trigger onDeselectAll callback
-                                onDeselectAll()
-                            }
-                        } else {
-                            // Select contact
-                            selectedContacts.add(selectedContact)
-                        }
-                    } else {
-                        onLongPress(selectedContact)
-                    }
-                },
-                contact = contact,
-                onClick = { clickedContact ->
-                    // Same logic for onClick in delete mode
-                    if (isDeleteMode) {
-                        if (selectedContacts.contains(clickedContact)) {
-                            // Deselect contact
-                            selectedContacts.remove(clickedContact)
-                            if (selectedContacts.isEmpty()) {
-                                onDeselectAll()
-                            }
-                        } else {
-                            // Select contact
-                            selectedContacts.add(clickedContact)
-                        }
-                    }
-                }
-            )
+@Composable
+fun Person(viewModal: contactViewModal) {
+        val sortedContacts by viewModal.contactList.collectAsState()
+
+        LazyColumn(modifier = Modifier.padding(top = 10.dp)) {
+            items(sortedContacts) { contact ->
+                DesignOfContact(
+                    viewModal,
+                    contact.id,
+                    firstName = contact.firstName.trim(),
+                    lastName = contact.lastName,
+                    number = contact.number
+                )
+            }
         }
-    }
 }
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DesignOfContact(
-    firstName: String,
-    lastName: String,
-    number: Long,
-    isSelected: Boolean,
-    onLongPress: (Contact) -> Unit,
-    contact: Contact,
-    onClick: (Contact) -> Unit // Adding onClick parameter for selection
-) {
+fun DesignOfContact(viewModal: contactViewModal,id:Int,firstName: String, lastName: String, number: Long) {
     Row(
         modifier = Modifier
             .background(color = Color.Black)
-            .background(if (isSelected) Color.Red else Color.Black)
             .fillMaxWidth()
-            .height(70.dp)
-            .combinedClickable(
-                onClick = { onClick(contact) }, // Handle click for selection/deselection
-                onLongClick = { onLongPress(contact) } // Handle long press for enabling delete mode
-            ),
-        verticalAlignment = Alignment.CenterVertically
+            .height(70.dp),
+        verticalAlignment = Alignment.CenterVertically,
+//        horizontalArrangement = Arrangement.SpaceAround
     ) {
         Text(
             text = firstName.substring(0, 1),
@@ -232,10 +170,15 @@ fun DesignOfContact(
 
         Text(
             text = "$firstName $lastName\n$number",
-            modifier = Modifier.padding(start = 40.dp),
+            modifier = Modifier.padding(start = 40.dp).width(200.dp),
             fontSize = 17.sp,
             color = Color.White,
             fontFamily = FontFamily(Font(R.font.roboto_one))
+        )
+        Image(painter = painterResource(R.drawable.delete),"delete",
+            modifier = Modifier.size(20.dp).clickable(onClick = {
+                viewModal.deleteContact(id)
+            })
         )
     }
 }
@@ -251,7 +194,7 @@ fun getRandomColor(): Color {
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun AddContact(listOfaContacts: MutableList<Contact>) {
+fun AddContact(viewModal: contactViewModal) {
     val context = LocalContext.current
 
     var bottomSheet by remember {
@@ -348,8 +291,8 @@ fun AddContact(listOfaContacts: MutableList<Contact>) {
                             if(lastname.isNotEmpty()){
                                 lastname =  lastname.trim()[0].uppercase()+lastname.substring(1)
                             }
-                            val contact = Contact(firstname,lastname, number.toLong())
-                            listOfaContacts.add(contact)
+                            val contact = Contact(firstName = firstname, lastName = lastname, number  = number.toLong())
+                            viewModal.addContact(contact)
                             bottomSheet = false
                             firstname = ""
                             lastname = ""
@@ -370,36 +313,6 @@ fun AddContact(listOfaContacts: MutableList<Contact>) {
                     Text(text = "Add Contact", fontSize = 15.sp)
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun DeleteHeader(
-    selectedContacts: MutableList<Contact>,
-    listOfaContacts: MutableList<Contact>,
-    onCancel: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 50.dp, start = 20.dp, end = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TextButton(onClick = onCancel) {
-            Text(text = "Cancel", color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        TextButton(
-            onClick = {
-                // Delete selected contacts
-                listOfaContacts.removeAll(selectedContacts)
-                onCancel()
-            }
-        ) {
-            Text(text = "Delete (${selectedContacts.size})", color = Color.White)
         }
     }
 }
