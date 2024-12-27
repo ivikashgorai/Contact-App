@@ -171,7 +171,9 @@ fun DesignOfContact(viewModal: contactViewModal,id:Int,nameColor:Color,firstName
 
         Text(
             text = "$firstName $lastName\n$number",
-            modifier = Modifier.padding(start = 40.dp).width(150.dp),
+            modifier = Modifier
+                .padding(start = 40.dp)
+                .width(150.dp),
             fontSize = 17.sp,
             color = Color.White,
             fontFamily = FontFamily(Font(R.font.roboto_one))
@@ -181,7 +183,9 @@ fun DesignOfContact(viewModal: contactViewModal,id:Int,nameColor:Color,firstName
             mutableStateOf(false)
         }
 
-        Image(painter = painterResource(R.drawable.edit),"edit", modifier = Modifier.padding(end=10.dp).size(20.dp)
+        Image(painter = painterResource(R.drawable.edit),"edit", modifier = Modifier
+            .padding(end = 10.dp)
+            .size(20.dp)
             .clickable(onClick = {
                 edit = true
                 viewModal.searchContactById(id)
@@ -318,14 +322,58 @@ fun DesignOfContact(viewModal: contactViewModal,id:Int,nameColor:Color,firstName
         }
 
 
-        //
-        Image(painter = painterResource(R.drawable.delete),"delete",
-            modifier = Modifier.padding(start = 15.dp).size(20.dp).clickable(onClick = {
-                viewModal.deleteContact(id)
-            })
+        var isShowDialog by remember {
+            mutableStateOf(false)
+        }
+
+        LogOutDialog(isShowDialog,onDismiss={
+            isShowDialog = false
+        },onConfirm={
+            viewModal.deleteContact(id)
+            isShowDialog = false
+        })
+        Image(
+            painter = painterResource(R.drawable.delete), "delete",
+            modifier = Modifier
+                .padding(start = 15.dp)
+                .size(20.dp)
+                .clickable(onClick = {
+                    isShowDialog = true
+//                viewModal.deleteContact(id)
+                })
         )
     }
 }
+
+@Composable
+ fun LogOutDialog(isShowDialog:Boolean,onDismiss:()->Unit,onConfirm:()->Unit){
+     if(isShowDialog) {
+         AlertDialog(onDismissRequest = {
+             onDismiss()
+         },
+             confirmButton = {
+                 TextButton(onClick = {
+                     onConfirm()
+                 }) {
+                     Text("Yes")
+                 }
+             },
+             dismissButton = {
+                 TextButton(onClick = {
+                     onDismiss()
+                 }) {
+                     Text("No")
+                 }
+             },
+             title = {
+                 Text("Delete Contact?")
+             },
+             text = {
+                 Text("Are you sure you want to delete this contact?")
+             }
+         )
+     }
+ }
 
 
 
