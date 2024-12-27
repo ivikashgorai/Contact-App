@@ -17,5 +17,6 @@ Welcome to the **Contact App** repository! This app is designed to be the ultima
 - **Material Design**
 
 ## Screenshots
-![Alt Text](Untitled-Image.png)
+![App Screenshot](Untitled%20design.png)
+
 
